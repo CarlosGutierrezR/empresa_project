@@ -73,3 +73,11 @@ def get_supplier_anomalies():
     ORDER BY anomaly_probability DESC
     """
     return run_query(query)
+
+@app.get("/")
+def root():
+    return {
+        "message": "Multi-Currency Financial Data API is running",
+        "docs_url": "/docs",
+        "health_url": "/health"
+    }
