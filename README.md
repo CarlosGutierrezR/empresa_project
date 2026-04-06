@@ -1,301 +1,182 @@
-# Multi-Currency Financial Data Platform on GCP
+Descripción del proyecto
 
-## Overview
+Este proyecto consiste en el diseño e implementación de una plataforma de datos en la nube orientada a resolver un problema real del ámbito empresarial: la gestión y análisis de información financiera en múltiples monedas.
 
-This project simulates an enterprise data engineering solution for a company that operates across multiple countries and manages financial transactions in different currencies.  
-The platform ingests official foreign exchange rates from the European Central Bank (ECB) and combines them with financial transactional data to build analytics-ready datasets in Google Cloud Platform (GCP).
+La solución permite integrar datos financieros con tipos de cambio oficiales del Banco Central Europeo (ECB), transformarlos y generar indicadores clave en una moneda común (EUR), facilitando la toma de decisiones en áreas como controlling y accounting.
 
-The main goal is to centralize financial data, convert amounts into EUR, and generate reliable KPIs for controlling, accounting, and decision-making.
+🧠 Contexto de negocio
 
----
+Simulamos un escenario donde una empresa del sector energético opera en distintos países y trabaja con múltiples monedas.
 
-## Business Context
+Esto genera problemas como:
 
-This project is inspired by a consulting-style scenario in which a company in the energy sector needs to improve its financial reporting processes.
+❌ Datos financieros dispersos
+❌ Procesos manuales de reporting
+❌ Conversión de divisas inconsistente
+❌ Baja visibilidad del impacto del tipo de cambio
 
-The organization works with invoices, payments, and vendors across different currencies, which creates challenges such as:
-- fragmented financial data,
-- manual reporting processes,
-- inconsistent currency conversion,
-- limited visibility into exchange-rate impact.
+Para resolverlo, se plantea una solución como si un equipo de ingeniería de datos (nuestro equipo del Bootcamp) fuera contratado para construir una plataforma cloud escalable y analítica.
 
-The solution is designed as if a data engineering team were contracted to build a cloud-based analytics platform to solve this business problem.
+🎯 Objetivo
 
----
+Construir una plataforma que sea capaz de:
 
-## Problem Statement
-
-Many organizations that operate internationally handle financial transactions in multiple currencies. Without a centralized and automated data platform, it becomes difficult to:
-- consolidate financial data into a common base currency,
-- compare business periods consistently,
-- measure exchange-rate exposure,
-- and support finance teams with trustworthy reporting.
-
-This project addresses that problem by building a cloud-based multi-currency financial analytics platform on GCP.
-
----
-
-## Project Objectives
-
-- Ingest official ECB exchange-rate data.
-- Integrate financial transactional data.
-- Store raw data in Google Cloud Storage and BigQuery.
-- Transform and model data into analytics-ready tables.
-- Convert invoice amounts into EUR using official FX rates.
-- Generate finance-oriented KPIs for reporting and analysis.
-- Prepare a presentation layer with Streamlit connected to BigQuery.
-
----
-
-## Project Scope
-
-### V1 — Cloud Foundation
-- Project structure
-- GCP setup
-- Cloud Storage raw layer
-- BigQuery raw dataset
-- ECB ingestion pipeline
-
-### V2 — Analytics Layer
-- Staging models
-- Marts models
-- EUR conversion logic
-- Financial KPIs
-
-### V3 — Engineering / DevOps
-- Repository structure
-- Environment configuration
-- Data validation
-- Logging
-- Reproducible execution
-
-### V4 — Presentation Layer
-- Streamlit application
-- BigQuery connection
-- Executive dashboard
-- Business insights display
-
----
-
-## Solution Architecture
-
-```text
-ECB API + Financial Transactional Data
+💱 Consolidar datos financieros multi-moneda en EUR
+📊 Analizar el impacto de los tipos de cambio
+📈 Generar KPIs financieros consistentes
+⚠️ Detectar anomalías en el gasto
+🧑‍💼 Proporcionar visualización para negocio
+🏗️ Arquitectura de la solución
+ECB + Datos financieros (ERP-like)
                 ↓
-          Python ingestion
+        Ingesta con Python
                 ↓
-     Cloud Storage (raw landing)
+   Cloud Storage (capa raw)
                 ↓
-         BigQuery raw tables
+        BigQuery (raw)
                 ↓
-       BigQuery staging models
+     BigQuery (staging)
                 ↓
-         BigQuery marts / KPIs
+       BigQuery (marts)
                 ↓
-      Streamlit dashboard (V4)
+ API (FastAPI en Cloud Run)
+                ↓
+   Dashboard (Streamlit)
+🛠️ Tecnologías utilizadas
+☁️ Google Cloud Platform (GCP)
+🪣 Cloud Storage
+📊 BigQuery
+🐍 Python
+🧾 SQL
+⚡ FastAPI
+🐳 Docker
+🚀 Cloud Run
+📈 Streamlit
+🔧 Git / GitHub
+📂 Fuentes de datos
+1. 📊 ECB (European Central Bank)
 
-      Technology Stack
-Google Cloud Platform (GCP)
-Cloud Storage
-BigQuery
-Python
-SQL
-Streamlit
-Git / GitHub
-VS Code
-Data Sources
-1. European Central Bank (ECB)
+Tipos de cambio oficiales utilizados para convertir importes a EUR.
 
-Official foreign exchange reference rates used to convert financial amounts into EUR.
+2. 🧾 Dataset financiero (simulado)
 
-2. Financial transactional dataset
+Incluye información de:
 
-A finance-oriented transactional dataset representing invoices, payments, vendors, and business-related financial operations.
+facturas
+proveedores
+órdenes de compra
+requisiciones
+🧱 Modelo de datos
 
-3. Complementary modeled entities
+El proyecto sigue una arquitectura por capas:
 
-Additional supporting dimensions may be created when necessary, such as:
+🔹 Raw
 
-vendors,
-cost centers,
-currencies,
-calendar references.
+Datos originales sin transformar
 
-These are used to simulate a realistic enterprise reporting scenario.
-
-Data Model
-
-The project follows a layered analytical design:
-
-Raw Layer
-
-Stores data as close as possible to the source.
-
-Examples:
+Ejemplo:
 
 raw.ecb_fx_rates
-raw.fin_invoices
-raw.fin_payments
-raw.fin_vendors
-Staging Layer
+raw.oracle_invoices
+🔹 Staging
 
-Applies cleaning, standardization, type casting, and basic business rules.
+Limpieza y estandarización
 
-Examples:
+Tipado correcto
+Normalización de moneda
+Reglas básicas de negocio
+🔹 Marts
 
-staging.stg_fx_rates
-staging.stg_invoices
-staging.stg_payments
-staging.stg_vendors
-Marts Layer
+Datos listos para análisis
 
-Contains analytics-ready data products for business consumption.
+Principales tablas:
 
-Examples:
+fact_ap_invoices_eur → facturas convertidas a EUR
+kpi_monthly_spend_eur → gasto mensual
+kpi_top_suppliers → top proveedores
+kpi_currency_exposure → exposición por moneda
+kpi_fx_exceptions → errores de conversión
+kpi_supplier_anomalies_enriched → anomalías
+📊 KPIs generados
+💰 Gasto total en EUR
+📆 Gasto mensual
+🏢 Top proveedores por gasto
+🌍 Exposición por moneda
+⚠️ Excepciones FX
+🤖 Anomalías en gasto
+🌐 API en producción
 
-marts.fact_invoices_eur
-marts.fact_payments
-marts.dim_vendors
-marts.mart_finance_kpis
-Key KPIs
+La API está desplegada en Cloud Run:
 
-The project is designed to generate indicators such as:
+👉 https://financial-api-484677665897.europe-west1.run.app
 
-Total invoice amount
-Total invoice amount converted to EUR
-Overdue invoices count
-Overdue amount
-Average payment delay
-Payment compliance rate
-Spend by vendor
-Spend by month
-Currency exposure
-FX-adjusted financial trend
-Repository Structure
-multi-currency-financial-data-platform/
-│
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── docs/
-│   ├── architecture.md
-│   ├── business_case.md
-│   └── data_dictionary.md
-│
-├── sql/
-│   ├── raw/
-│   ├── staging/
-│   └── marts/
-│
-├── src/
-│   ├── extract/
-│   ├── load/
-│   ├── transform/
-│   └── utils/
-│
-├── streamlit_app/
-│
-├── tests/
-│
-├── .env.example
-├── .gitignore
-├── README.md
-└── requirements.txt
-Prerequisites
+Endpoints principales:
 
-Before running the project, make sure you have:
+/health
+/kpis/executive-summary
+/kpis/monthly-spend
+/kpis/top-suppliers
+/kpis/currency-exposure
+/kpis/fx-exceptions
+/kpis/supplier-anomalies
+📊 Dashboard (Streamlit)
 
-Python 3.10+
-A GCP project
-BigQuery enabled
-Cloud Storage enabled
-Google Cloud SDK installed
-Proper authentication configured
-A service account or local auth setup if required
-GCP Configuration
+Aplicación conectada a la API para visualización:
 
-The project is expected to use:
-
-Cloud Storage bucket for raw landing files
-BigQuery datasets for:
-raw
-staging
-marts
-
-Suggested naming example:
-
-Bucket: mcfdp-raw-<suffix>
-Datasets:
-raw
-staging
-marts
-Environment Variables
-
-The project may require environment variables such as:
-
-GCP_PROJECT_ID=your-project-id
-GCS_BUCKET_NAME=your-bucket-name
-BQ_RAW_DATASET=raw
-BQ_STAGING_DATASET=staging
-BQ_MARTS_DATASET=marts
-
-Create a .env file locally based on .env.example.
-
-Installation
+KPIs principales
+Evolución temporal
+Ranking de proveedores
+Exposición por moneda
+Anomalías detectadas
+▶️ Cómo ejecutar el proyecto
+1. Clonar repositorio
+git clone https://github.com/CarlosGutierrezR/empresa_project.git
+cd empresa_project
+2. Instalar dependencias
 pip install -r requirements.txt
-Execution Flow
+3. Ejecutar API en local
+uvicorn main:app --reload
+4. Ejecutar Streamlit
+streamlit run streamlit_app.py
+⚙️ Estructura del proyecto
+empresa_project/
+│
+├── src/                  # scripts de ingesta
+├── sql/                  # queries analíticas
+├── main.py               # API FastAPI
+├── streamlit_app.py      # dashboard
+├── Dockerfile
+├── requirements.txt
+├── README.md
+🧪 Validaciones realizadas
+✔ Conteo de registros en todas las capas
+✔ Validación de conversiones FX
+✔ Integridad de joins
+✔ KPIs coherentes
+✔ API funcional en producción
+✔ Dashboard operativo
+🚧 Limitaciones
+Datos simulados (no SAP real)
+Sin orquestación (Airflow/Composer)
+Sin CI/CD automatizado
+🔮 Mejoras futuras
+⚙️ Automatización con Cloud Build
+🔄 Orquestación de pipelines
+🧪 Testing de datos
+🏗️ Infraestructura como código (Terraform)
+📊 Dashboard más avanzado
+💡 Valor del proyecto
 
-A typical execution flow is:
+Este proyecto demuestra capacidades reales en:
 
-Extract ECB exchange-rate data
-Store raw files in Cloud Storage
-Load raw data into BigQuery
-Run staging transformations
-Run marts transformations
-Query KPIs
-Expose results through Streamlit (V4)
-Data Quality Checks
+Ingeniería de datos en la nube
+Modelado analítico
+Integración de datos financieros
+Desarrollo de APIs
+Arquitectura moderna de datos
+Pensamiento orientado a negocio
+👨‍💻 Equipo
 
-Examples of data quality rules in this project:
+Proyecto desarrollado como parte del:
 
-exchange-rate date must not be null
-invoice amount must be greater than zero
-invoice currency must not be null
-invoice date must be valid
-FX conversion must only happen when a matching rate is available
-relationships between invoices and payments must be consistent
-Expected Output
-
-The final solution is expected to provide:
-
-a reproducible cloud-based data pipeline,
-analytics-ready financial tables in BigQuery,
-EUR-normalized financial metrics,
-business KPIs for reporting,
-and an interactive Streamlit dashboard connected to BigQuery.
-Current Limitations
-This project does not currently use SAP production data.
-Cloud Composer, Dataflow, and streaming are not part of the initial version.
-Some supporting entities may be modeled to simulate a realistic business scenario.
-Future Improvements
-Add workflow orchestration
-Add automated testing
-Add CI/CD
-Add Terraform-based infrastructure setup
-Integrate more business dimensions
-Extend the Streamlit dashboard with advanced filters and insights
-Why This Project Matters
-
-This project is not only a technical exercise. It is designed to simulate a real-world enterprise reporting problem and to demonstrate skills in:
-
-data engineering,
-cloud data platforms,
-financial data modeling,
-analytics,
-and professional software/project structure.
-Author
-
-Carlos Alberto
-Data Engineering / Cybersecurity profile
-Project built as a professional portfolio case aligned with enterprise cloud data engineering roles.
+🎓 Digital Tech Bootcamp — Proyecto Final
