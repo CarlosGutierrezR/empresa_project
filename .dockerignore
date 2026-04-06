@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+.local_gcloud_config
+data
+docs
+*.csv
+*.md
+desktop.ini
