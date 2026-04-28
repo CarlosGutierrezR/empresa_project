@@ -77,7 +77,7 @@ def get_supplier_anomalies():
 @app.get("/")
 def root():
     return {
-        "message": "Multi-Currency Financial Data API is running",
+        "message": "Multi-Currency Financial Data API is running V2",
         "docs_url": "/docs",
         "health_url": "/health"
     }
