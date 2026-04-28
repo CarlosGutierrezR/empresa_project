@@ -1,31 +1,47 @@
-Descripción del proyecto
+# 🌍 Veritas Fex  
+### La verdad de tus números en cualquier moneda
 
-Este proyecto consiste en el diseño e implementación de una plataforma de datos en la nube orientada a resolver un problema real del ámbito empresarial: la gestión y análisis de información financiera en múltiples monedas.
+---
 
-La solución permite integrar datos financieros con tipos de cambio oficiales del Banco Central Europeo (ECB), transformarlos y generar indicadores clave en una moneda común (EUR), facilitando la toma de decisiones en áreas como controlling y accounting.
+## 👥 Equipo de trabajo — Grupo 2
 
-🧠 Contexto de negocio
+- Juan Castellano Castillero  
+- Victoria Torres Torres  
+- Carlos Gutiérrez Rondón  
+- Alberto Munuera Ramos  
 
-Simulamos un escenario donde una empresa del sector energético opera en distintos países y trabaja con múltiples monedas.
+---
 
-Esto genera problemas como:
+## 🧠 Descripción del proyecto
 
-❌ Datos financieros dispersos
-❌ Procesos manuales de reporting
-❌ Conversión de divisas inconsistente
-❌ Baja visibilidad del impacto del tipo de cambio
+Veritas Fex es una plataforma de datos en la nube diseñada para resolver un problema real del entorno empresarial: la gestión y análisis de información financiera en múltiples monedas.
 
-Para resolverlo, se plantea una solución como si un equipo de ingeniería de datos (nuestro equipo del Bootcamp) fuera contratado para construir una plataforma cloud escalable y analítica.
+Muchas organizaciones operan con datos financieros distribuidos en distintos sistemas, con procesos manuales de reporting que dificultan la comparación y el análisis del impacto del tipo de cambio.
 
-🎯 Objetivo
+Este proyecto simula un escenario de consultoría en el que se diseña e implementa una solución cloud para:
 
-Construir una plataforma que sea capaz de:
+- centralizar datos financieros  
+- convertir importes a una moneda base (EUR)  
+- generar indicadores analíticos  
+- proporcionar una visualización clara para negocio  
 
-💱 Consolidar datos financieros multi-moneda en EUR
-📊 Analizar el impacto de los tipos de cambio
-📈 Generar KPIs financieros consistentes
-⚠️ Detectar anomalías en el gasto
-🧑‍💼 Proporcionar visualización para negocio
+---
+
+## 🎯 Problema de negocio
+
+Las empresas que operan en múltiples monedas enfrentan:
+
+- datos fragmentados en distintos sistemas  
+- reporting manual y poco escalable  
+- dificultad para comparar periodos  
+- falta de visibilidad sobre el impacto del tipo de cambio  
+
+Veritas Fex resuelve este problema mediante una plataforma analítica automatizada en GCP.
+
+---
+
+## 🏗️ Arquitectura de la solución
+
 🏗️ Arquitectura de la solución
 ECB + Datos financieros (ERP-like)
                 ↓
@@ -56,127 +72,127 @@ ECB + Datos financieros (ERP-like)
 📂 Fuentes de datos
 1. 📊 ECB (European Central Bank)
 
-Tipos de cambio oficiales utilizados para convertir importes a EUR.
+---
 
-2. 🧾 Dataset financiero (simulado)
+## 📊 Capas de datos
 
-Incluye información de:
+### 🔹 Raw
+Datos originales sin transformar  
+- ECB FX rates  
+- datos financieros  
 
-facturas
-proveedores
-órdenes de compra
-requisiciones
-🧱 Modelo de datos
+### 🔹 Staging
+- limpieza  
+- normalización  
+- tipado  
 
-El proyecto sigue una arquitectura por capas:
+### 🔹 Marts
+- datos listos para negocio  
+- KPIs financieros  
 
-🔹 Raw
+---
 
-Datos originales sin transformar
+## 📈 KPIs generados
 
-Ejemplo:
+- Gasto total consolidado en EUR  
+- Total de facturas  
+- Exposición por moneda  
+- Top proveedores  
+- Excepciones FX  
+- Detección de anomalías  
 
-raw.ecb_fx_rates
-raw.oracle_invoices
-🔹 Staging
+---
 
-Limpieza y estandarización
+## 🚀 Servicios desplegados
 
-Tipado correcto
-Normalización de moneda
-Reglas básicas de negocio
-🔹 Marts
+### 🔹 Backend (API)
+Cloud Run  
+👉 https://financial-api-484677665897.europe-west1.run.app  
 
-Datos listos para análisis
+Swagger:
+👉 /docs  
 
-Principales tablas:
+---
 
-fact_ap_invoices_eur → facturas convertidas a EUR
-kpi_monthly_spend_eur → gasto mensual
-kpi_top_suppliers → top proveedores
-kpi_currency_exposure → exposición por moneda
-kpi_fx_exceptions → errores de conversión
-kpi_supplier_anomalies_enriched → anomalías
-📊 KPIs generados
-💰 Gasto total en EUR
-📆 Gasto mensual
-🏢 Top proveedores por gasto
-🌍 Exposición por moneda
-⚠️ Excepciones FX
-🤖 Anomalías en gasto
-🌐 API en producción
+### 🔹 Frontend (Dashboard)
+Cloud Run  
+👉 https://financial-frontend-484677665897.europe-west1.run.app  
 
-La API está desplegada en Cloud Run:
+---
 
-👉 https://financial-api-484677665897.europe-west1.run.app
+## 📦 Contenedores
 
-Endpoints principales:
+Imágenes almacenadas en:
 
-/health
-/kpis/executive-summary
-/kpis/monthly-spend
-/kpis/top-suppliers
-/kpis/currency-exposure
-/kpis/fx-exceptions
-/kpis/supplier-anomalies
-📊 Dashboard (Streamlit)
+👉 Artifact Registry  
+Repositorio: `financial-api-repo`
 
-Aplicación conectada a la API para visualización:
+---
 
-KPIs principales
-Evolución temporal
-Ranking de proveedores
-Exposición por moneda
-Anomalías detectadas
-▶️ Cómo ejecutar el proyecto
-1. Clonar repositorio
-git clone https://github.com/CarlosGutierrezR/empresa_project.git
-cd empresa_project
-2. Instalar dependencias
-pip install -r requirements.txt
-3. Ejecutar API en local
-uvicorn main:app --reload
-4. Ejecutar Streamlit
-streamlit run streamlit_app.py
-⚙️ Estructura del proyecto
-empresa_project/
-│
-├── src/                  # scripts de ingesta
-├── sql/                  # queries analíticas
-├── main.py               # API FastAPI
-├── streamlit_app.py      # dashboard
-├── Dockerfile
-├── requirements.txt
-├── README.md
-🧪 Validaciones realizadas
-✔ Conteo de registros en todas las capas
-✔ Validación de conversiones FX
-✔ Integridad de joins
-✔ KPIs coherentes
-✔ API funcional en producción
-✔ Dashboard operativo
-🚧 Limitaciones
-Datos simulados (no SAP real)
-Sin orquestación (Airflow/Composer)
-Sin CI/CD automatizado
-🔮 Mejoras futuras
-⚙️ Automatización con Cloud Build
-🔄 Orquestación de pipelines
-🧪 Testing de datos
-🏗️ Infraestructura como código (Terraform)
-📊 Dashboard más avanzado
-💡 Valor del proyecto
+## 🔄 Flujo de datos
 
-Este proyecto demuestra capacidades reales en:
+1. Extracción de datos ECB  
+2. Carga en Cloud Storage  
+3. Ingesta en BigQuery  
+4. Transformación (raw → staging → marts)  
+5. Exposición vía API  
+6. Consumo en dashboard  
 
-Ingeniería de datos en la nube
-Modelado analítico
-Integración de datos financieros
-Desarrollo de APIs
-Arquitectura moderna de datos
-Pensamiento orientado a negocio
+---
+
+## 📅 Planificación del proyecto
+
+- Fase 1: análisis y arquitectura  
+- Fase 2: ingesta de datos  
+- Fase 3: modelado en BigQuery  
+- Fase 4: KPIs  
+- Fase 5: dashboard  
+- Fase 6: validación y documentación  
+
+---
+
+## 🎯 Resultado final
+
+La solución permite:
+
+- consolidar información financiera en EUR  
+- analizar impacto del tipo de cambio  
+- generar indicadores fiables  
+- proporcionar un dashboard interactivo  
+
+---
+
+## ⚠️ Limitaciones actuales
+
+- No se utilizan datos reales de SAP  
+- No hay automatización CI/CD en esta versión  
+- No se implementa streaming  
+
+---
+
+## 🔮 Mejoras futuras
+
+- CI/CD con GitHub Actions  
+- orquestación con Cloud Composer  
+- mayor granularidad en KPIs  
+- mejoras en visualización  
+
+---
+
+## 💼 Valor profesional
+
+Este proyecto demuestra capacidades en:
+
+- ingeniería de datos  
+- modelado analítico  
+- arquitectura cloud  
+- desarrollo backend  
+- visualización de datos  
+- enfoque de negocio  
+
+---
 👨‍💻 Equipo
 
 Proyecto desarrollado como parte del:
 
-🎓 Digital Tech Bootcamp — Proyecto Final
+🎓 Digital Tech Bootcamp — Proyecto Final - Grupo # 2
