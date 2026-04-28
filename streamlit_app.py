@@ -422,7 +422,7 @@ def render_hero():
     st.markdown(
         """
         <div class="hero-card">
-            <p class="hero-eyebrow">Plataforma de Datos Financieros Multi-Moneda en GCP</p>
+            <p class="hero-eyebrow">Veritas Fex — Plataforma Financiera Multi-Moneda en GCP</p>
             <h1 class="hero-title">Panel ejecutivo para consolidacion financiera, analisis FX e indicadores de negocio</h1>
             <p class="hero-subtitle">
                 Este dashboard convierte informacion financiera multi-moneda a EUR en una lectura clara para negocio.
