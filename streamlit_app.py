@@ -113,8 +113,8 @@ def inject_styles():
         }
 
         .block-container {
-            max-width: 1280px;
-            padding-top: 1.75rem;
+            max-width: 1320px;
+            padding-top: 1.5rem;
             padding-bottom: 3rem;
         }
 
@@ -122,12 +122,23 @@ def inject_styles():
             background: transparent;
         }
 
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #1e2336 0%, #131827 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        section[data-testid="stSidebar"] .block-container {
+            padding-top: 1.5rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
         .hero-card {
             background: linear-gradient(135deg, #0f172a 0%, #173a74 56%, #0f766e 100%);
             border-radius: 26px;
             padding: 2.2rem 2.35rem;
             color: #f8fafc;
-            box-shadow: 0 24px 56px rgba(15, 23, 42, 0.22);
+            box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18);
             margin-bottom: 1.35rem;
         }
 
@@ -136,20 +147,21 @@ def inject_styles():
             font-size: 0.82rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            font-weight: 700;
+            font-weight: 800;
             color: #bfdbfe;
         }
 
         .hero-title {
             margin: 0;
-            font-size: 2.3rem;
-            line-height: 1.15;
+            font-size: 2.2rem;
+            line-height: 1.18;
             font-weight: 800;
+            max-width: 980px;
         }
 
         .hero-subtitle {
             margin: 0.85rem 0 0 0;
-            max-width: 920px;
+            max-width: 940px;
             font-size: 1rem;
             line-height: 1.72;
             color: rgba(248, 250, 252, 0.93);
@@ -174,7 +186,7 @@ def inject_styles():
             margin: 0 0 0.2rem 0;
             color: #2563eb;
             font-size: 0.78rem;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }
@@ -200,11 +212,11 @@ def inject_styles():
 
         .kpi-card {
             min-height: 172px;
-            background: rgba(255, 255, 255, 0.97);
+            background: rgba(255, 255, 255, 0.98);
             border: 1px solid #dce4ec;
             border-radius: 22px;
             padding: 1.15rem 1.15rem 1rem 1.15rem;
-            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
         }
 
         .kpi-accent {
@@ -254,21 +266,39 @@ def inject_styles():
         }
 
         div[data-testid="stDataFrame"] {
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, 0.96);
             border: 1px solid #dce4ec;
             border-radius: 20px;
-            padding: 0.4rem;
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+            padding: 0.35rem;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
             overflow: hidden;
         }
 
         div[data-testid="stVegaLiteChart"] {
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, 0.96);
             border: 1px solid #dce4ec;
             border-radius: 20px;
-            padding: 0.5rem;
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+            padding: 0.6rem;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
             overflow: hidden;
+        }
+
+        .stDownloadButton > button,
+        .stButton > button {
+            width: 100%;
+            border-radius: 12px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #0f172a !important;
+            color: #f8fafc !important;
+            font-weight: 600 !important;
+            min-height: 2.7rem;
+        }
+
+        .stDownloadButton > button:hover,
+        .stButton > button:hover {
+            background: #173a74 !important;
+            color: #ffffff !important;
+            border-color: #173a74 !important;
         }
 
         .stAlert {
@@ -461,7 +491,7 @@ def render_hero():
     st.markdown(
         """
         <div class="hero-card">
-            <p class="hero-eyebrow">Veritas Fex — Plataforma Financiera Multi-Moneda en GCP</p>
+            <p class="hero-eyebrow">VERITAS FEX — Plataforma Financiera Multi-Moneda en GCP</p>
             <h1 class="hero-title">Panel ejecutivo para consolidacion financiera, analisis FX e indicadores de negocio</h1>
             <p class="hero-subtitle">
                 Este dashboard convierte informacion financiera multi-moneda a EUR en una lectura clara para negocio.
@@ -520,6 +550,38 @@ def render_kpi_cards(kpi_map):
             )
 
 
+def apply_chart_style(chart):
+    return (
+        chart
+        .configure(background="#ffffff")
+        .configure_view(
+            strokeWidth=0,
+            fill="#ffffff",
+        )
+        .configure_axis(
+            gridColor="#e2e8f0",
+            gridOpacity=1,
+            labelColor="#0f172a",
+            titleColor="#0f172a",
+            domainColor="#cbd5e1",
+            tickColor="#cbd5e1",
+            labelFontSize=12,
+            titleFontSize=12,
+        )
+        .configure_legend(
+            labelColor="#0f172a",
+            titleColor="#0f172a",
+            labelFontSize=12,
+            titleFontSize=12,
+        )
+        .configure_title(
+            color="#0f172a",
+            fontSize=14,
+            anchor="start",
+        )
+    )
+
+
 def build_monthly_chart(df):
     if "month_date" not in df.columns or "total_amount_eur" not in df.columns:
         return None
@@ -552,24 +614,27 @@ def build_monthly_chart(df):
             "mes:N",
             sort=chart_df["mes"].tolist(),
             title="Mes",
-            axis=alt.Axis(labelAngle=0, labelPadding=10),
+            axis=alt.Axis(
+                labelAngle=-35,
+                labelPadding=8,
+                labelLimit=120,
+                titlePadding=12,
+            ),
         ),
-        y=alt.Y("total_amount_eur:Q", title="Gasto consolidado (EUR)"),
+        y=alt.Y(
+            "total_amount_eur:Q",
+            title="Gasto consolidado (EUR)",
+            axis=alt.Axis(format=",.0f"),
+        ),
         tooltip=tooltip_fields,
     )
 
     area = base.mark_area(color="#93c5fd", opacity=0.22)
     line = base.mark_line(color="#0f766e", strokeWidth=3)
-    points = base.mark_circle(color="#0f172a", size=58)
+    points = base.mark_circle(color="#0f172a", size=52)
 
-    return (
-        area + line + points
-    ).properties(height=360).configure_view(strokeWidth=0).configure_axis(
-        gridColor="#e2e8f0",
-        labelColor="#475569",
-        titleColor="#0f172a",
-        domainColor="#cbd5e1",
-    )
+    chart = (area + line + points).properties(height=360)
+    return apply_chart_style(chart)
 
 
 def build_horizontal_bar_chart(df, category_column, value_column, axis_title, color):
@@ -595,23 +660,27 @@ def build_horizontal_bar_chart(df, category_column, value_column, axis_title, co
         chart_df["facturas_tooltip"] = chart_df["invoice_count"].apply(format_integer)
         tooltip_fields.append(alt.Tooltip("facturas_tooltip:N", title="Facturas"))
 
-    return (
+    chart = (
         alt.Chart(chart_df)
         .mark_bar(color=color, cornerRadiusTopRight=7, cornerRadiusBottomRight=7)
         .encode(
-            y=alt.Y(f"{category_column}:N", sort="-x", title=None),
-            x=alt.X(f"{value_column}:Q", title=axis_title),
+            y=alt.Y(
+                f"{category_column}:N",
+                sort="-x",
+                title=None,
+                axis=alt.Axis(labelLimit=160),
+            ),
+            x=alt.X(
+                f"{value_column}:Q",
+                title=axis_title,
+                axis=alt.Axis(format=",.0f"),
+            ),
             tooltip=tooltip_fields,
         )
         .properties(height=max(260, min(520, len(chart_df) * 42)))
-        .configure_view(strokeWidth=0)
-        .configure_axis(
-            gridColor="#e2e8f0",
-            labelColor="#475569",
-            titleColor="#0f172a",
-            domainColor="#cbd5e1",
-        )
     )
+
+    return apply_chart_style(chart)
 
 
 def render_dataframe(df, column_order=None, max_rows=10):
@@ -771,6 +840,8 @@ def render_sidebar_filters(monthly, top_suppliers, currency, fx, anomalies):
         default=supplier_options,
     )
 
+    st.sidebar.caption("Tip: selecciona solo 2 o 3 proveedores para una vista mas limpia.")
+
     max_rows = st.sidebar.slider(
         "Filas visibles por tabla",
         min_value=5,
@@ -822,7 +893,7 @@ def render_monthly_section(monthly, max_rows):
 
     monthly_chart = build_monthly_chart(monthly)
     if monthly_chart is not None:
-        st.altair_chart(monthly_chart, use_container_width=True)
+        st.altair_chart(monthly_chart, use_container_width=True, theme=None)
     else:
         st.info("No se pudo construir el grafico mensual con los datos disponibles.")
 
@@ -866,7 +937,7 @@ def render_suppliers_section(top_suppliers, max_rows):
     )
 
     if top_suppliers_chart is not None:
-        st.altair_chart(top_suppliers_chart, use_container_width=True)
+        st.altair_chart(top_suppliers_chart, use_container_width=True, theme=None)
     else:
         st.info("No se pudo construir el grafico de proveedores con los datos disponibles.")
 
@@ -922,7 +993,7 @@ def render_currency_section(currency, max_rows):
     )
 
     if currency_chart is not None:
-        st.altair_chart(currency_chart, use_container_width=True)
+        st.altair_chart(currency_chart, use_container_width=True, theme=None)
     else:
         st.info("No se pudo construir el grafico de exposicion por moneda con los datos disponibles.")
 
