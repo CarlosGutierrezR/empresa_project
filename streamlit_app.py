@@ -1,3 +1,4 @@
+import os
 from html import escape
 
 import altair as alt
@@ -5,12 +6,15 @@ import pandas as pd
 import requests
 import streamlit as st
 
-API_BASE_URL = "https://financial-api-484677665897.europe-west1.run.app"
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "https://financial-api-484677665897.europe-west1.run.app",
+)
 
 st.set_page_config(
     page_title="Panel Ejecutivo Financiero Multi-Moneda",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 MONTH_NAMES_ES = {
@@ -276,9 +280,28 @@ def inject_styles():
     )
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def get_data(endpoint):
-    response = requests.get(f"{API_BASE_URL}{endpoint}")
-    return pd.DataFrame(response.json())
+    url = f"{API_BASE_URL}{endpoint}"
+
+    try:
+        response = requests.get(url, timeout=20)
+        response.raise_for_status()
+        payload = response.json()
+    except requests.exceptions.RequestException as exc:
+        st.error(f"No se pudo consultar la API en {endpoint}: {exc}")
+        return pd.DataFrame()
+    except ValueError:
+        st.error(f"La API devolvio una respuesta no valida en {endpoint}.")
+        return pd.DataFrame()
+
+    if isinstance(payload, list):
+        return pd.DataFrame(payload)
+
+    if isinstance(payload, dict):
+        return pd.DataFrame([payload])
+
+    return pd.DataFrame()
 
 
 def coerce_number(value):
@@ -427,13 +450,13 @@ def render_hero():
             <p class="hero-subtitle">
                 Este dashboard convierte informacion financiera multi-moneda a EUR en una lectura clara para negocio.
                 La vista integra gasto total consolidado, evolucion mensual, proveedores de mayor impacto, exposicion por
-                moneda, excepciones de conversion FX y anomalias relevantes sin alterar la logica actual ni la conexion
-                con la API desplegada en Cloud Run.
+                moneda, excepciones de conversion FX y anomalias relevantes, consumiendo la API desplegada en Cloud Run.
             </p>
             <div class="hero-pill-row">
                 <span class="hero-pill">Consolidacion multi-moneda en EUR</span>
                 <span class="hero-pill">Impacto del tipo de cambio</span>
                 <span class="hero-pill">KPIs ejecutivos para negocio</span>
+                <span class="hero-pill">Filtros interactivos</span>
             </div>
         </div>
         """,
@@ -577,7 +600,7 @@ def build_horizontal_bar_chart(df, category_column, value_column, axis_title, co
 
 def render_dataframe(df, column_order=None, max_rows=10):
     if df.empty:
-        st.info("No hay registros disponibles para esta visual.")
+        st.info("No hay registros disponibles para esta visual con los filtros actuales.")
         return
 
     display_df = prepare_display_dataframe(df, column_order=column_order)
@@ -589,55 +612,204 @@ def render_dataframe(df, column_order=None, max_rows=10):
     )
 
 
-inject_styles()
-render_hero()
+def to_csv_bytes(df):
+    return df.to_csv(index=False).encode("utf-8-sig")
 
-kpis = get_data("/kpis/executive-summary")
-kpi_map = dict(zip(kpis["kpi_name"], kpis["kpi_value"]))
-monthly = get_data("/kpis/monthly-spend")
-top_suppliers = get_data("/kpis/top-suppliers")
-currency = get_data("/kpis/currency-exposure")
-fx = get_data("/kpis/fx-exceptions")
-anomalies = get_data("/kpis/supplier-anomalies")
 
-render_section_header(
-    "Resumen ejecutivo",
-    "Indicadores clave para negocio",
-    (
-        "Estos KPIs sintetizan el estado financiero consolidado en EUR, el volumen operativo y los focos "
-        "de riesgo que requieren seguimiento ejecutivo."
-    ),
-)
-render_kpi_cards(kpi_map)
+def render_download_button(df, label, filename, key):
+    if df.empty:
+        return
 
-st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
+    st.download_button(
+        label=label,
+        data=to_csv_bytes(df),
+        file_name=filename,
+        mime="text/csv",
+        key=key,
+        use_container_width=True,
+    )
 
-render_section_header(
-    "Tendencia de gasto",
-    "Evolucion mensual del gasto consolidado",
-    (
-        "Esta vista ayuda a mostrar el gasto mensual consolidado en EUR y a detectar cambios de tendencia "
-        "sin depender de la moneda original de cada factura."
-    ),
-)
-render_viz_header(
-    "Gasto mensual consolidado en EUR",
-    (
-        "Ayuda a entender la evolucion del gasto total consolidado y a medir el objetivo del proyecto de "
-        "unificar la lectura financiera multi-moneda en una base comparable."
-    ),
-)
-monthly_chart = build_monthly_chart(monthly)
-if monthly_chart is not None:
-    st.altair_chart(monthly_chart, use_container_width=True)
-else:
-    st.info("No se pudo construir el grafico mensual con los datos disponibles.")
 
-st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
+def normalize_month_column(df):
+    if df.empty or "month_date" not in df.columns:
+        return df
 
-left_column, right_column = st.columns([1.15, 1])
+    result = df.copy()
+    result["month_date"] = pd.to_datetime(result["month_date"], errors="coerce")
+    return result
 
-with left_column:
+
+def filter_by_month_range(df, selected_range):
+    if df.empty or "month_date" not in df.columns or not selected_range:
+        return df
+
+    result = normalize_month_column(df)
+    if result["month_date"].isna().all():
+        return result
+
+    start_month, end_month = selected_range
+    start_month = pd.to_datetime(start_month)
+    end_month = pd.to_datetime(end_month)
+
+    return result[
+        (result["month_date"] >= start_month)
+        & (result["month_date"] <= end_month)
+    ]
+
+
+def filter_by_values(df, column_name, selected_values):
+    if df.empty or column_name not in df.columns or not selected_values:
+        return df
+
+    return df[df[column_name].astype(str).isin(selected_values)]
+
+
+def get_available_values(df, column_name):
+    if df.empty or column_name not in df.columns:
+        return []
+
+    return sorted(df[column_name].dropna().astype(str).unique().tolist())
+
+
+def get_month_options(*dataframes):
+    month_values = []
+
+    for df in dataframes:
+        if df.empty or "month_date" not in df.columns:
+            continue
+
+        months = pd.to_datetime(df["month_date"], errors="coerce").dropna()
+        month_values.extend(months.tolist())
+
+    if not month_values:
+        return []
+
+    unique_months = sorted(pd.Series(month_values).drop_duplicates().tolist())
+    return unique_months
+
+
+def render_sidebar_filters(monthly, top_suppliers, currency, fx, anomalies):
+    st.sidebar.title("Filtros de negocio")
+    st.sidebar.caption(
+        "Los filtros modifican las visualizaciones disponibles en la app. "
+        "Los KPIs ejecutivos superiores son globales porque la API actual devuelve agregados ya calculados."
+    )
+
+    selected_view = st.sidebar.radio(
+        "Vista de analisis",
+        [
+            "Dashboard completo",
+            "Resumen ejecutivo",
+            "Tendencia mensual",
+            "Proveedores",
+            "Exposicion FX",
+            "Excepciones FX",
+            "Anomalias",
+        ],
+        index=0,
+    )
+
+    month_options = get_month_options(monthly, anomalies)
+    if month_options:
+        selected_month_range = st.sidebar.select_slider(
+            "Periodo",
+            options=month_options,
+            value=(month_options[0], month_options[-1]),
+            format_func=format_month_year_es,
+        )
+    else:
+        selected_month_range = None
+
+    currency_options = get_available_values(currency, "currency_code")
+    if not currency_options:
+        currency_options = get_available_values(fx, "currency_code")
+
+    selected_currencies = st.sidebar.multiselect(
+        "Monedas",
+        options=currency_options,
+        default=currency_options,
+    )
+
+    supplier_options = get_available_values(top_suppliers, "supplier_name")
+    anomaly_supplier_options = get_available_values(anomalies, "supplier_name")
+    supplier_options = sorted(set(supplier_options + anomaly_supplier_options))
+
+    selected_suppliers = st.sidebar.multiselect(
+        "Proveedores",
+        options=supplier_options,
+        default=supplier_options,
+    )
+
+    max_rows = st.sidebar.slider(
+        "Filas visibles por tabla",
+        min_value=5,
+        max_value=25,
+        value=10,
+        step=5,
+    )
+
+    st.sidebar.divider()
+    st.sidebar.caption(f"API activa: {API_BASE_URL}")
+
+    return {
+        "selected_view": selected_view,
+        "selected_month_range": selected_month_range,
+        "selected_currencies": selected_currencies,
+        "selected_suppliers": selected_suppliers,
+        "max_rows": max_rows,
+    }
+
+
+def render_executive_summary(kpi_map):
+    render_section_header(
+        "Resumen ejecutivo",
+        "Indicadores clave para negocio",
+        (
+            "Estos KPIs sintetizan el estado financiero consolidado en EUR, el volumen operativo y los focos "
+            "de riesgo que requieren seguimiento ejecutivo."
+        ),
+    )
+    render_kpi_cards(kpi_map)
+
+
+def render_monthly_section(monthly, max_rows):
+    render_section_header(
+        "Tendencia de gasto",
+        "Evolucion mensual del gasto consolidado",
+        (
+            "Esta vista ayuda a mostrar el gasto mensual consolidado en EUR y a detectar cambios de tendencia "
+            "sin depender de la moneda original de cada factura."
+        ),
+    )
+    render_viz_header(
+        "Gasto mensual consolidado en EUR",
+        (
+            "Ayuda a entender la evolucion del gasto total consolidado y a medir el objetivo del proyecto de "
+            "unificar la lectura financiera multi-moneda en una base comparable."
+        ),
+    )
+
+    monthly_chart = build_monthly_chart(monthly)
+    if monthly_chart is not None:
+        st.altair_chart(monthly_chart, use_container_width=True)
+    else:
+        st.info("No se pudo construir el grafico mensual con los datos disponibles.")
+
+    with st.expander("Ver detalle mensual"):
+        render_dataframe(
+            monthly,
+            column_order=["month_date", "invoice_count", "total_amount_eur"],
+            max_rows=max_rows,
+        )
+        render_download_button(
+            monthly,
+            "Descargar detalle mensual CSV",
+            "veritas_fex_gasto_mensual.csv",
+            "download_monthly",
+        )
+
+
+def render_suppliers_section(top_suppliers, max_rows):
     render_section_header(
         "Concentracion de gasto",
         "Top proveedores por gasto",
@@ -653,6 +825,7 @@ with left_column:
             "consolidado en EUR."
         ),
     )
+
     top_suppliers_chart = build_horizontal_bar_chart(
         top_suppliers,
         category_column="supplier_name",
@@ -660,6 +833,7 @@ with left_column:
         axis_title="Gasto consolidado (EUR)",
         color="#2563eb",
     )
+
     if top_suppliers_chart is not None:
         st.altair_chart(top_suppliers_chart, use_container_width=True)
     else:
@@ -681,10 +855,17 @@ with left_column:
             "total_amount_eur",
             "total_amount_original",
         ],
-        max_rows=10,
+        max_rows=max_rows,
+    )
+    render_download_button(
+        top_suppliers,
+        "Descargar proveedores CSV",
+        "veritas_fex_top_proveedores.csv",
+        "download_suppliers",
     )
 
-with right_column:
+
+def render_currency_section(currency, max_rows):
     render_section_header(
         "Exposicion por divisa",
         "Impacto de las monedas sobre el gasto",
@@ -700,6 +881,7 @@ with right_column:
             "riesgo FX puede ser mas relevante."
         ),
     )
+
     currency_chart = build_horizontal_bar_chart(
         currency,
         category_column="currency_code",
@@ -707,6 +889,7 @@ with right_column:
         axis_title="Exposicion consolidada (EUR)",
         color="#0f766e",
     )
+
     if currency_chart is not None:
         st.altair_chart(currency_chart, use_container_width=True)
     else:
@@ -728,60 +911,173 @@ with right_column:
             "total_amount_eur",
             "rows_without_amount_eur",
         ],
-        max_rows=10,
+        max_rows=max_rows,
+    )
+    render_download_button(
+        currency,
+        "Descargar exposicion por moneda CSV",
+        "veritas_fex_exposicion_moneda.csv",
+        "download_currency",
     )
 
-st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
 
-render_section_header(
-    "Control de conversion FX",
-    "Excepciones de conversion a EUR",
-    (
-        "Esta seccion ayuda a detectar registros que no pudieron convertirse correctamente a EUR y, por tanto, "
-        "requieren revision para proteger la calidad del dato y el analisis financiero."
-    ),
-)
-render_viz_header(
-    "Facturas con excepciones de conversion FX",
-    (
-        "Ayuda a resolver el objetivo de mostrar excepciones de conversion FX para actuar sobre incidencias "
-        "que afectan la consolidacion financiera multi-moneda."
-    ),
-)
-render_dataframe(fx, max_rows=12)
+def render_fx_exceptions_section(fx, max_rows):
+    render_section_header(
+        "Control de conversion FX",
+        "Excepciones de conversion a EUR",
+        (
+            "Esta seccion ayuda a detectar registros que no pudieron convertirse correctamente a EUR y, por tanto, "
+            "requieren revision para proteger la calidad del dato y el analisis financiero."
+        ),
+    )
+    render_viz_header(
+        "Facturas con excepciones de conversion FX",
+        (
+            "Ayuda a resolver el objetivo de mostrar excepciones de conversion FX para actuar sobre incidencias "
+            "que afectan la consolidacion financiera multi-moneda."
+        ),
+    )
+    render_dataframe(fx, max_rows=max_rows)
+    render_download_button(
+        fx,
+        "Descargar excepciones FX CSV",
+        "veritas_fex_excepciones_fx.csv",
+        "download_fx",
+    )
 
-st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
 
-render_section_header(
-    "Deteccion de anomalias",
-    "Comportamientos relevantes de proveedores",
-    (
-        "Esta seccion ayuda a detectar desviaciones de gasto frente a rangos esperados y a priorizar revisiones "
-        "de negocio sobre casos potencialmente anormales."
-    ),
-)
-render_viz_header(
-    "Anomalias relevantes en gasto por proveedor",
-    (
-        "Ayuda a resolver el objetivo de identificar anomalias relevantes y convertir senales analiticas en "
-        "una vista ejecutiva facil de entender."
-    ),
-)
-render_dataframe(
-    anomalies,
-    column_order=[
+def render_anomalies_section(anomalies, max_rows):
+    render_section_header(
+        "Deteccion de anomalias",
+        "Comportamientos relevantes de proveedores",
+        (
+            "Esta seccion ayuda a detectar desviaciones de gasto frente a rangos esperados y a priorizar revisiones "
+            "de negocio sobre casos potencialmente anormales."
+        ),
+    )
+    render_viz_header(
+        "Anomalias relevantes en gasto por proveedor",
+        (
+            "Ayuda a resolver el objetivo de identificar anomalias relevantes y convertir senales analiticas en "
+            "una vista ejecutiva facil de entender."
+        ),
+    )
+    render_dataframe(
+        anomalies,
+        column_order=[
+            "supplier_name",
+            "supplier_id",
+            "month_date",
+            "total_amount_eur",
+            "lower_bound",
+            "upper_bound",
+            "anomaly_probability",
+        ],
+        max_rows=max_rows,
+    )
+    render_download_button(
+        anomalies,
+        "Descargar anomalias CSV",
+        "veritas_fex_anomalias.csv",
+        "download_anomalies",
+    )
+
+
+def main():
+    inject_styles()
+    render_hero()
+
+    with st.spinner("Cargando datos desde la API desplegada en Cloud Run..."):
+        kpis = get_data("/kpis/executive-summary")
+        monthly = get_data("/kpis/monthly-spend")
+        top_suppliers = get_data("/kpis/top-suppliers")
+        currency = get_data("/kpis/currency-exposure")
+        fx = get_data("/kpis/fx-exceptions")
+        anomalies = get_data("/kpis/supplier-anomalies")
+
+    if kpis.empty:
+        st.error("No se pudieron cargar los KPIs ejecutivos desde la API.")
+        st.stop()
+
+    kpi_map = dict(zip(kpis["kpi_name"], kpis["kpi_value"]))
+
+    filters = render_sidebar_filters(monthly, top_suppliers, currency, fx, anomalies)
+
+    monthly_filtered = filter_by_month_range(monthly, filters["selected_month_range"])
+    anomalies_filtered = filter_by_month_range(anomalies, filters["selected_month_range"])
+
+    top_suppliers_filtered = filter_by_values(
+        top_suppliers,
         "supplier_name",
-        "supplier_id",
-        "month_date",
-        "total_amount_eur",
-        "lower_bound",
-        "upper_bound",
-        "anomaly_probability",
-    ],
-    max_rows=12,
-)
+        filters["selected_suppliers"],
+    )
+    anomalies_filtered = filter_by_values(
+        anomalies_filtered,
+        "supplier_name",
+        filters["selected_suppliers"],
+    )
 
-st.caption(
-    "Nota: las cifras en EUR representan la consolidacion financiera multi-moneda. "
-    "La logica de negocio, los endpoints y la integracion con la API actual se mantienen sin cambios."
-)
+    currency_filtered = filter_by_values(
+        currency,
+        "currency_code",
+        filters["selected_currencies"],
+    )
+    fx_filtered = filter_by_values(
+        fx,
+        "currency_code",
+        filters["selected_currencies"],
+    )
+
+    selected_view = filters["selected_view"]
+    max_rows = filters["max_rows"]
+
+    if selected_view in ["Dashboard completo", "Resumen ejecutivo"]:
+        render_executive_summary(kpi_map)
+        st.info(
+            "Los KPIs ejecutivos son globales. Para recalcularlos por filtros seria necesario "
+            "extender la API con parametros de moneda, proveedor y periodo."
+        )
+
+    if selected_view == "Dashboard completo":
+        st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
+
+    if selected_view in ["Dashboard completo", "Tendencia mensual"]:
+        render_monthly_section(monthly_filtered, max_rows)
+
+    if selected_view == "Dashboard completo":
+        st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
+        left_column, right_column = st.columns([1.15, 1])
+
+        with left_column:
+            render_suppliers_section(top_suppliers_filtered, max_rows)
+
+        with right_column:
+            render_currency_section(currency_filtered, max_rows)
+
+    if selected_view == "Proveedores":
+        render_suppliers_section(top_suppliers_filtered, max_rows)
+
+    if selected_view == "Exposicion FX":
+        render_currency_section(currency_filtered, max_rows)
+
+    if selected_view == "Dashboard completo":
+        st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
+
+    if selected_view in ["Dashboard completo", "Excepciones FX"]:
+        render_fx_exceptions_section(fx_filtered, max_rows)
+
+    if selected_view == "Dashboard completo":
+        st.markdown('<div class="section-separator"></div>', unsafe_allow_html=True)
+
+    if selected_view in ["Dashboard completo", "Anomalias"]:
+        render_anomalies_section(anomalies_filtered, max_rows)
+
+    st.caption(
+        "Nota: las cifras en EUR representan la consolidacion financiera multi-moneda. "
+        "La app consume endpoints FastAPI desplegados en Cloud Run y aplica filtros de visualizacion "
+        "sobre los datasets agregados disponibles."
+    )
+
+
+if __name__ == "__main__":
+    main()
