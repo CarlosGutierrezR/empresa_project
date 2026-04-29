@@ -353,15 +353,31 @@ def format_identifier(value):
     return text_value[:-2] if text_value.endswith(".0") else text_value
 
 
+def normalize_datetime_series(series):
+    return pd.to_datetime(series, errors="coerce", utc=True).dt.tz_localize(None)
+
+
+def normalize_datetime_value(value):
+    date_value = pd.to_datetime(value, errors="coerce", utc=True)
+
+    if pd.isna(date_value):
+        return pd.NaT
+
+    if isinstance(date_value, pd.Timestamp):
+        return date_value.tz_localize(None) if date_value.tzinfo else date_value
+
+    return date_value
+
+
 def format_month_year_es(value):
-    date_value = pd.to_datetime(value, errors="coerce")
+    date_value = normalize_datetime_value(value)
     if pd.isna(date_value):
         return "Sin dato" if pd.isna(value) else str(value)
     return f"{MONTH_NAMES_ES[date_value.month]} {date_value.year}"
 
 
 def format_date_es(value):
-    date_value = pd.to_datetime(value, errors="coerce")
+    date_value = normalize_datetime_value(value)
     if pd.isna(date_value):
         return "Sin dato" if pd.isna(value) else str(value)
     return date_value.strftime("%d/%m/%Y")
@@ -509,7 +525,7 @@ def build_monthly_chart(df):
         return None
 
     chart_df = df.copy()
-    chart_df["month_date"] = pd.to_datetime(chart_df["month_date"], errors="coerce")
+    chart_df["month_date"] = normalize_datetime_series(chart_df["month_date"])
     chart_df["total_amount_eur"] = pd.to_numeric(chart_df["total_amount_eur"], errors="coerce")
 
     if "invoice_count" in chart_df.columns:
@@ -635,7 +651,7 @@ def normalize_month_column(df):
         return df
 
     result = df.copy()
-    result["month_date"] = pd.to_datetime(result["month_date"], errors="coerce")
+    result["month_date"] = normalize_datetime_series(result["month_date"])
     return result
 
 
@@ -648,8 +664,11 @@ def filter_by_month_range(df, selected_range):
         return result
 
     start_month, end_month = selected_range
-    start_month = pd.to_datetime(start_month)
-    end_month = pd.to_datetime(end_month)
+    start_month = normalize_datetime_value(start_month)
+    end_month = normalize_datetime_value(end_month)
+
+    if pd.isna(start_month) or pd.isna(end_month):
+        return result
 
     return result[
         (result["month_date"] >= start_month)
@@ -658,8 +677,14 @@ def filter_by_month_range(df, selected_range):
 
 
 def filter_by_values(df, column_name, selected_values):
-    if df.empty or column_name not in df.columns or not selected_values:
+    if df.empty or column_name not in df.columns:
         return df
+
+    if selected_values is None:
+        return df
+
+    if len(selected_values) == 0:
+        return df.iloc[0:0]
 
     return df[df[column_name].astype(str).isin(selected_values)]
 
@@ -678,13 +703,19 @@ def get_month_options(*dataframes):
         if df.empty or "month_date" not in df.columns:
             continue
 
-        months = pd.to_datetime(df["month_date"], errors="coerce").dropna()
+        months = normalize_datetime_series(df["month_date"]).dropna()
         month_values.extend(months.tolist())
 
     if not month_values:
         return []
 
-    unique_months = sorted(pd.Series(month_values).drop_duplicates().tolist())
+    unique_months = (
+        pd.Series(month_values)
+        .dropna()
+        .drop_duplicates()
+        .sort_values()
+        .tolist()
+    )
     return unique_months
 
 
